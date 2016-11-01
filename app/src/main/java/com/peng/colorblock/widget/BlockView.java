@@ -70,9 +70,9 @@ public class BlockView extends LinearLayout {
             for (int j = 0; j < colNum; j++) {
 
                 blocks[i][j] = new Block(context);
-//                btn.setPadding(btnPadding, btnPadding, btnPadding, btnPadding);
-                blocks[i][j].setBackgroundColor(Color.YELLOW);
+                blocks[i][j].setColor(Block.Color.values()[j%Block.Color.values().length]);
                 blocks[i][j].setPosition(new Block.Position(i, j));
+                blocks[i][j].setStatus(Block.Status.on);
                 btnLp = new LinearLayout.LayoutParams(blockSize, blockSize);
                 btnLp.setMargins(btnPadding, btnPadding, btnPadding, btnPadding);
                 row.addView(blocks[i][j], btnLp);
