@@ -1,20 +1,28 @@
 package com.peng.colorblock.widget;
 
+import android.animation.Animator;
+import android.animation.AnimatorInflater;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.PointF;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Animation;
+import android.view.animation.AnimationSet;
 import android.view.animation.RotateAnimation;
 import android.widget.Button;
 
 import com.peng.colorblock.R;
+import com.peng.colorblock.util.BezierEvaluator;
+import com.peng.colorblock.util.ScreenUtil;
 
 /**
  * Created by Hanrong on 2016/10/30.
@@ -45,66 +53,65 @@ public class Block extends View {
 
     public Position getPosition() {
         return position;
-    }public void setPosition(Position position) {
+    }
+
+    public void setPosition(Position position) {
         this.position = position;
     }
 
 
     public Block(Context context) {
         super(context);
-        init();
+        init(context);
     }
 
     public Block(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init();
+        init(context);
     }
 
     public Block(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
+        init(context);
     }
 
-    private void init(){
+    private void init(Context context) {
+        setClickable(true);
         paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setMaskFilter(new BlurMaskFilter(RADIUS_BLURMASKFILTER, BlurMaskFilter.Blur.NORMAL));
+        int screenWidth = ScreenUtil.getWidth(context);
+        int screenHeight = ScreenUtil.getHeight(context);
+        float ratio = (screenWidth > screenHeight ? screenWidth : screenHeight) / 1280f;
+        start = new PointF(0, 0);
+        end = new PointF(50 * ratio, 50 * ratio);
+        point1 = new PointF(20 * ratio, 30 * ratio);
+        point2 = new PointF(40 * ratio, 60 * ratio);
+
+        final BezierEvaluator evaluator = new BezierEvaluator(point1, point2);
+
+        final Animator animator = AnimatorInflater.loadAnimator(context, R.animator.anim_block_rotate);
 
         setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(final View view) {
-                if (status == Status.on) {
-//                    ObjectAnimator objectAnimator = ObjectAnimator.ofFloat(this, "", 0, 360 * 4);
-//                    view.setVisibility(View.GONE);
-                    Animation.AnimationListener listener = new Animation.AnimationListener() {
+                if (((Block) view).getStatus() == Status.on) {
+                    ObjectAnimator objectAnimator = ObjectAnimator.ofObject(view, "x", evaluator, start, end);
+                    AnimatorSet set = new AnimatorSet();
+                    set.play(animator).with(objectAnimator);
+                    set.addListener(new AnimatorListenerAdapter() {
                         @Override
-                        public void onAnimationStart(Animation animation) {
-
+                        public void onAnimationEnd(Animator animation) {
+                            view.setVisibility(View.INVISIBLE);
+                            super.onAnimationEnd(animation);
                         }
-
-                        @Override
-                        public void onAnimationEnd(Animation animation) {
-                            ((ViewGroup) view.getParent()).removeView(view);
-                        }
-
-                        @Override
-                        public void onAnimationRepeat(Animation animation) {
-
-                        }
-                    };
-                    RotateAnimation rotateAnimation = new RotateAnimation(0, 360 * 4, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
-                    rotateAnimation.setInterpolator(new AccelerateDecelerateInterpolator());
-                    rotateAnimation.setDuration(1000);
-                    rotateAnimation.setFillAfter(false);
-                    rotateAnimation.setAnimationListener(listener);
-                    view.startAnimation(rotateAnimation);
-
-
+                    });
                 }
             }
         });
     }
 
     private int measuredSize;
+
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         measuredSize = MeasureSpec.getSize(widthMeasureSpec);
@@ -115,6 +122,12 @@ public class Block extends View {
 
     private static final int RADIUS_ROUND_RECT = 10;
     private static final float RADIUS_BLURMASKFILTER = 0.5f;
+
+    private PointF start;
+    private PointF end;
+    private PointF point1;
+    private PointF point2;
+
     @Override
     protected void onDraw(Canvas canvas) {
         RectF rectF = new RectF(0, 0, measuredSize, measuredSize);
@@ -126,10 +139,11 @@ public class Block extends View {
      * 脱落后设置状态
      */
     private void off() {
-    setStatus(Status.off);
-}
+        setStatus(Status.off);
+    }
+
     public static class Position {
-        int x,y;
+        int x, y;
 
         public Position(int x, int y) {
             this.x = x;
@@ -137,6 +151,7 @@ public class Block extends View {
         }
 
     }
+
     enum Status {
         /**
          * 还在的
@@ -150,7 +165,8 @@ public class Block extends View {
 
     enum Color {
         yellow(R.color.yellow), blue(R.color.blue), red(R.color.red), purple(R.color.purple), green(R.color.green),;
-public int colorId;
+        public int colorId;
+
         Color(int colorId) {
             this.colorId = colorId;
         }
