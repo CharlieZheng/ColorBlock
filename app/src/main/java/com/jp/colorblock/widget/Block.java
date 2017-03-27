@@ -3,6 +3,8 @@ package com.jp.colorblock.widget;
 import android.animation.Animator;
 import android.animation.AnimatorInflater;
 import android.animation.AnimatorListenerAdapter;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
@@ -20,12 +22,12 @@ import com.jp.colorblock.util.ScreenUtil;
 public class Block extends View {
     private static final int RADIUS_ROUND_RECT = 10;
     private static final float RADIUS_BLUR_MASK_FILTER = 0.5f;
-    private final RectF rectF = new RectF();
+    private RectF rectF = new RectF();
     private Context context;
     private Status status;
     private Position position;
     private Paint paint;
-    private int measuredSize;
+    private PointF measuredSize = new PointF();
     private PointF start;
     private PointF end;
 
@@ -45,11 +47,20 @@ public class Block extends View {
         init(context);
     }
 
-    public RectF getYll() {
+    public PointF getMeasuredSize() {
+        return measuredSize;
+    }
+
+    public void setMeasuredSize(PointF measuredSize) {
+        this.measuredSize = measuredSize;
+    }
+
+    public RectF getRectF() {
         return rectF;
     }
 
-    public void setYll(RectF rectF) {
+    public void setRectF(RectF rectF) {
+        this.rectF = rectF;
     }
 
     public void setColor(Color color) {
@@ -85,24 +96,32 @@ public class Block extends View {
         PointF point1 = new PointF(20 * ratio, 30 * ratio);
         PointF point2 = new PointF(40 * ratio, 60 * ratio);
         final BezierEvaluator evaluator = new BezierEvaluator(point1, point2);
-        final Animator animator = AnimatorInflater.loadAnimator(context, R.animator.anim_block_rotate);
+//        AnimatorSet set = new AnimatorSet();
+        final ObjectAnimator objectAnimatorByXml = (ObjectAnimator) AnimatorInflater.loadAnimator(context, R.animator.anim_block_rotate);
+//        objectAnimatorByXml.setEvaluator(new ArgbEvaluator());
+        final ObjectAnimator objectAnimator = ObjectAnimator.ofObject(this, "measuredSize", evaluator, start, end);
+        objectAnimator.setDuration(2000L);
+//        set.play(objectAnimatorByXml).with(objectAnimator);
+        objectAnimator.setTarget(this);
+        objectAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                postInvalidate();
+            }
+        });
+        objectAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                Block.this.setVisibility(View.INVISIBLE);
+                super.onAnimationEnd(animation);
+            }
+        });
+        // crux
         setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(final View view) {
                 if (((Block) view).getStatus() == Status.on) {
-//                    ObjectAnimator objectAnimator = ObjectAnimator.ofObject(view, "yll", evaluator, start, end);
-//                    AnimatorSet set = new AnimatorSet();
-//                    set.play(animator).with(objectAnimator);
-//                    set.play(animator);
-                    animator.addListener(new AnimatorListenerAdapter() {
-                        @Override
-                        public void onAnimationEnd(Animator animation) {
-                            view.setVisibility(View.INVISIBLE);
-                            super.onAnimationEnd(animation);
-                        }
-                    });
-//                    objectAnimator.start();
-                    animator.start();
+                    objectAnimator.start();
                 }
             }
         });
@@ -110,14 +129,14 @@ public class Block extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        measuredSize = MeasureSpec.getSize(widthMeasureSpec);
-        int measureSpec = MeasureSpec.makeMeasureSpec(measuredSize, MeasureSpec.EXACTLY);
+        measuredSize.x = MeasureSpec.getSize(widthMeasureSpec);
+        int measureSpec = MeasureSpec.makeMeasureSpec(Math.round(measuredSize.x), MeasureSpec.EXACTLY);
         setMeasuredDimension(measureSpec, measureSpec);
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        rectF.set(0, 0, measuredSize, measuredSize);
+        rectF.set(0, 0, measuredSize.x, measuredSize.x);
         canvas.drawRoundRect(rectF, RADIUS_ROUND_RECT, RADIUS_ROUND_RECT, paint);
         super.onDraw(canvas);
     }
