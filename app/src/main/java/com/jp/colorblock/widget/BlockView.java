@@ -1,29 +1,25 @@
-package com.peng.colorblock.widget;
+package com.jp.colorblock.widget;
 
 import android.content.Context;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.animation.Animation;
-import android.view.animation.RotateAnimation;
-import android.widget.Button;
 import android.widget.LinearLayout;
 
-import com.peng.colorblock.util.ScreenUtil;
+import com.jp.colorblock.util.ScreenUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by Hanrong on 2016/10/29.
- */
 public class BlockView extends LinearLayout {
-    private Context context;
+
+    private static final int rowNum = 10;
+    /**
+     * 列数
+     */
+    private static final int colNum = 10;
+    private Block[][] blocks;
 
     public BlockView(Context context) {
         super(context);
@@ -40,25 +36,11 @@ public class BlockView extends LinearLayout {
         init(context);
     }
 
-    private static final int rowNum = 10;
-    /**
-     * 列数
-     */
-    private static final int colNum = 10;
-
-    private int blockSize;
-    private float wRatio;
-    private float hRatio;
-    private Block[][] blocks;
-
     private void init(Context context) {
-
-        this.context = context;
         blocks = new Block[rowNum][colNum];
-        wRatio = ScreenUtil.getWidth(context) / 720f;
-        hRatio = ScreenUtil.getWidth(context) / 1280f;
+        float wRatio = ScreenUtil.getWidth(context) / 720f;
         int btnPadding = (int) (2 * wRatio);
-        blockSize = (int) ((ScreenUtil.getWidth(context) - 20 * btnPadding) / (float) colNum + 0.5f);
+        int blockSize = (int) ((ScreenUtil.getWidth(context) - 20 * btnPadding) / (float) colNum + 0.5f);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
         lp.gravity = Gravity.CENTER;
 
@@ -70,16 +52,15 @@ public class BlockView extends LinearLayout {
             row.setBackgroundColor(Color.WHITE);
             row.setOrientation(LinearLayout.HORIZONTAL);
             LinearLayout.LayoutParams btnLp;
+            Block.Color[] temp = Block.Color.values();
             for (int j = 0; j < colNum; j++) {
-
                 blocks[i][j] = new Block(context);
-                blocks[i][j].setColor(Block.Color.values()[j%Block.Color.values().length]);
+                blocks[i][j].setColor(temp[j % temp.length]);
                 blocks[i][j].setPosition(new Block.Position(i, j));
                 blocks[i][j].setStatus(Block.Status.on);
                 btnLp = new LinearLayout.LayoutParams(blockSize, blockSize);
                 btnLp.setMargins(btnPadding, btnPadding, btnPadding, btnPadding);
                 row.addView(blocks[i][j], btnLp);
-
             }
             rowLp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, blockSize + 2 * btnPadding);
             label.addView(row, rowLp);
@@ -92,15 +73,15 @@ public class BlockView extends LinearLayout {
     /**
      * 找到将要脱落的Block
      *
-     * @param block
-     * @return
+     * @param block 被点击的砖块
+     * @return 即将被消除的砖块
      */
     private List<Block> findOffingBlock(Block block) {
         Block.Position position = block.getPosition();
         int x = position.x;
         int y = position.y;
-        List<Block> colOnBlkList = new ArrayList<Block>(); // 列
-        List<Block> rowOnBlkList = new ArrayList<Block>(); // 行
+        List<Block> colOnBlkList = new ArrayList<>(); // 列
+        List<Block> rowOnBlkList = new ArrayList<>(); // 行
         for (int i = 0; i < rowNum; i++) {
             if (blocks[i][y].getStatus() == Block.Status.on) {
                 colOnBlkList.add(blocks[i][y]);
@@ -112,44 +93,43 @@ public class BlockView extends LinearLayout {
             }
         }
 
-        int colZmin = Integer.MAX_VALUE, rowZmin = Integer.MAX_VALUE;
-        int colFmin = Integer.MIN_VALUE, rowFmin = Integer.MIN_VALUE;
+        int colZMin = Integer.MAX_VALUE, rowZMin = Integer.MAX_VALUE;
+        int colFMin = Integer.MIN_VALUE, rowFMin = Integer.MIN_VALUE;
         for (int i = 0; i < rowOnBlkList.size(); i++) {
             int item = rowOnBlkList.get(i).getPosition().y;
             if (item - y < 0) {
-                if (item > rowFmin) {
-                    rowFmin = item;
+                if (item > rowFMin) {
+                    rowFMin = item;
                 }
             } else {
-                if (item < rowZmin) {
-                    rowZmin = item;
+                if (item < rowZMin) {
+                    rowZMin = item;
                 }
             }
         }
         for (int i = 0; i < rowOnBlkList.size(); i++) {
             int item = colOnBlkList.get(i).getPosition().x;
             if (item - x < 0) {
-                if (item > colFmin) {
-                    colFmin = item;
+                if (item > colFMin) {
+                    colFMin = item;
                 }
             } else {
-                if (item < colZmin) {
-                    colZmin = item;
+                if (item < colZMin) {
+                    colZMin = item;
                 }
             }
         }
-        Block colZminBl, rowZminBl;
-        Block colFminBl, rowFminBl;
-        List<Block> nearlyList = new ArrayList<Block>();
-        colZminBl = blocks[colZmin][y];
-        rowZminBl = blocks[x][rowZmin];
-        colFminBl = blocks[colFmin][y];
-        rowFminBl = blocks[x][rowFmin];
-        nearlyList.add(rowZminBl);
-        nearlyList.add(colZminBl);
-        nearlyList.add(rowFminBl);
-        nearlyList.add(colFminBl);
-
+        Block colZMinBl, rowZMinBl;
+        Block colFMinBl, rowFMinBl;
+        List<Block> nearlyList = new ArrayList<>();
+        colZMinBl = blocks[colZMin][y];
+        rowZMinBl = blocks[x][rowZMin];
+        colFMinBl = blocks[colFMin][y];
+        rowFMinBl = blocks[x][rowFMin];
+        nearlyList.add(rowZMinBl);
+        nearlyList.add(colZMinBl);
+        nearlyList.add(rowFMinBl);
+        nearlyList.add(colFMinBl);
         return nearlyList;
     }
 
@@ -161,8 +141,6 @@ public class BlockView extends LinearLayout {
         for (int i = 0; i < getChildCount(); i++) {
             measureChild(getChildAt(i), measureSpec, measureSpec);
         }
-//init(context);
-//        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
 
     @Override
@@ -172,12 +150,6 @@ public class BlockView extends LinearLayout {
             View item = getChildAt(i);
             item.layout(l, t, r, b);
         }
-//        super.onLayout(changed, l, t, r, b);
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-//init(context);
-        super.onDraw(canvas);
+        super.onLayout(changed, l, t, r, b);
     }
 }
